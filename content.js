@@ -44,6 +44,7 @@ const linearReg = (coordinates) => {
 };
 
 let overlayElementsPool = [];
+let knownCharts = [];
 
 const predict = () => {
   for (const path of overlayElementsPool) path.remove();
@@ -51,6 +52,8 @@ const predict = () => {
 
   const charts = [...document.querySelectorAll(".BurnupChart")];
   const renderChart = (chart) => {
+    const svgElement = chart.querySelector("svg.highcharts-root");
+    const svgWidth = +svgElement.getAttribute("width");
     const lines = [
       ...chart.querySelectorAll(".highcharts-series .highcharts-tracker-line"),
     ];
@@ -78,23 +81,23 @@ const predict = () => {
         const lastPoint = points[points.length - 1];
         path.setAttribute(
           "d",
-          `M 0 ${lastPoint[1]} L  ${screen.width} ${lastPoint[1]}`
+          `M 0 ${lastPoint[1]} L  ${svgWidth * 3} ${lastPoint[1]}`
         );
-        linePoints.push([0, lastPoint[1], screen.width, lastPoint[1]]);
+        linePoints.push([0, lastPoint[1], svgWidth * 3, lastPoint[1]]);
       } else {
         // done line
         const reg = linearReg(points);
         path.setAttribute(
           "d",
-          `M 0 ${reg.intercept} L  ${screen.width} ${
-            reg.intercept + reg.slope * screen.width
+          `M 0 ${reg.intercept} L  ${svgWidth * 3} ${
+            reg.intercept + reg.slope * svgWidth * 3
           }`
         );
         linePoints.push([
           0,
           reg.intercept,
-          screen.width,
-          reg.intercept + reg.slope * screen.width,
+          svgWidth * 3,
+          reg.intercept + reg.slope * svgWidth * 3,
         ]);
       }
       line.parentElement.appendChild(path);
@@ -102,10 +105,8 @@ const predict = () => {
     }
     if (linePoints.length === 2) {
       const intersectPoint = intersect(...linePoints[0], ...linePoints[1]);
-      console.log(intersectPoint);
       if (!intersectPoint) return;
-      const svgElement = chart.querySelector("svg.highcharts-root");
-      const OFFSET = +svgElement.getAttribute("width") * 0.2;
+      const OFFSET = svgWidth * 0.2;
       svgElement.setAttribute(
         "viewBox",
         `0 ${Math.min(intersectPoint.y, 0)} ${intersectPoint.x + OFFSET} ${
@@ -120,9 +121,10 @@ const predict = () => {
       goalPoint.setAttribute("cx", intersectPoint.x);
       goalPoint.setAttribute("cy", intersectPoint.y);
       goalPoint.setAttribute("r", 5);
-      goalPoint.setAttribute("fill", "red");
-      chart
-        .querySelector(".highcharts-series .highcharts-tracker-line")
+      goalPoint.setAttribute("fill", "gray");
+      goalPoint.setAttribute("stroke", "gray");
+      [...chart.querySelectorAll(".highcharts-series .highcharts-tracker-line")]
+        .reverse()[0]
         .parentElement.appendChild(goalPoint);
       overlayElementsPool.push(goalPoint);
     }
